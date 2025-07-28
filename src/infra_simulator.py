@@ -129,11 +129,6 @@ def configure_vms_from_file(path):
 
     for vm in vm_list:
         configure_vm(vm['name'])
-        # vm_list.remove(vm)
-
-        # with open(path, 'w') as f:
-        #     data['vms'] = vm_list
-        #     json.dump(data, f)
 
 
 
