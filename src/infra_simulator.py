@@ -40,10 +40,10 @@ if logging_mode != 'logs_only':
 logger.basicConfig(level=logger.DEBUG, handlers=handlers)
 
 
+
+
+
 def ask_user_for_vms():
-    separator = '\n' + '-'*50 + '\n'
-
-
     flag = input("Would you like to create a new virtual machine (y/n): ")
     vms = []
 
@@ -54,7 +54,7 @@ def ask_user_for_vms():
             memory = input('Enter the amount of memory: ')
             disk = input('Enter the size of the disk: ')
 
-            logger.info(separator)
+            
 
             try:        
                 vm = VirtualMachine(
@@ -70,14 +70,14 @@ def ask_user_for_vms():
 
                 logger.info(f'Virtual Machine created: {vm}')
                 vms.append(dict(vm))
-                logger.info(separator)
+                
 
 
             except ValidationError as e:
                 for error in e.errors():
                     logger.warning(f"Validation error for field '{error['loc'][0]}': {error['msg']}")
                 
-                logger.info(separator)
+                
             except Exception:
                 logger.error('Something went wrong, please try again later..')
             finally:
