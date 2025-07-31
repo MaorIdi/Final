@@ -4,18 +4,27 @@ import json
 import os 
 import logging as logger
 import subprocess
-instances_config_path = '../configs/instances.json'
+from pathlib import Path
+
+
+def get_absolute_path(relative):
+    current_path = Path(__file__).parent
+    return (current_path / relative).resolve()
+
+
+
+
 
 log_formatter = logger.Formatter(
     '%(asctime)s - %(levelname)s - %(name)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-logs_dir = '../logs'
+logs_dir = get_absolute_path('../logs')
 if not os.path.exists(logs_dir):
     os.makedirs(logs_dir)
 
-file_handler = logger.FileHandler('../logs/provisioning.log', mode='a')
+file_handler = logger.FileHandler(get_absolute_path('../logs/provisioning.log'), mode='a')
 file_handler.setLevel(logger.DEBUG)
 file_handler.setFormatter(log_formatter)
 
@@ -37,8 +46,8 @@ def ask_user_for_vms():
         try:
             vm_name = input('Enter the nickname of the VM: ')
             cpu = input('Enter the number of CPUs: ')
-            memory = input('Enter the amount of memory (in MB): ')
-            disk = input('Enter the size of the disk (in GB): ')
+            memory = input('Enter the amount of memory: ')
+            disk = input('Enter the size of the disk: ')
 
             print(separator)
 
@@ -49,6 +58,10 @@ def ask_user_for_vms():
                     memory=memory,
                     disk=disk
                 )
+
+                
+                if ' ' in vm.name:
+                    vm.name = vm.name.replace(" ", '-')
 
                 logger.info(f'Virtual Machine created: {vm}')
                 vms.append(dict(vm))
@@ -71,6 +84,7 @@ def ask_user_for_vms():
     return vms
 
 
+instances_config_path = get_absolute_path('../configs/instances.json')
 
 def dump_vms(vms):
     if vms:
@@ -78,8 +92,8 @@ def dump_vms(vms):
         vms_obj = {"vms": vms}
 
 
-        configs_dir = '../configs'
-        if not os.path.exists(configs_dir):
+        configs_dir = get_absolute_path('../configs')
+        if not configs_dir.exists():
             os.makedirs(configs_dir)
 
         if not os.path.exists(instances_config_path):
@@ -114,7 +128,8 @@ def dump_vms(vms):
 
 def configure_vm(vm):
     try:
-        result = subprocess.run(['bash', '../scripts/init_vm.sh', str(vm)], capture_output=True, text=True)
+        logger.info(get_absolute_path('../scripts/init_vm.sh'))
+        result = subprocess.run(['bash', get_absolute_path('../scripts/init_vm.sh'), str(vm)], capture_output=True, text=True)
         logger.info(f"init_vm.sh output: {result.stdout.strip().replace('\n', ' - ')}")
         if result.stderr:
             logger.warning(f"init_vm.sh errors: {result.stderr.strip()}")
@@ -123,12 +138,37 @@ def configure_vm(vm):
 
 
 def configure_vms_from_file(path):
-    with open(path, 'r') as f:
-        data = json.load(f)
-        vm_list = data['vms']
+    abs_path = get_absolute_path(path)
+    if not abs_path.exists():
+        logger.warning(f"File not found: {abs_path}, creating an empty file.")
+        try:
+            abs_path.parent.mkdir(parents=True, exist_ok=True)
+            with abs_path.open('w') as f:
+                json.dump({"vms": []}, f)
+        except Exception as e:
+            logger.error(f"Failed to create file {abs_path}: {e}")
+        return
 
+    try:
+        with abs_path.open('r') as f:
+            data = json.load(f)
+    except json.JSONDecodeError:
+        logger.error(f"Invalid JSON in file: {abs_path}")
+        return
+    except Exception as e:
+        logger.error(f"Error reading file {abs_path}: {e}")
+        return
+
+    if 'vms' not in data or not isinstance(data['vms'], list):
+        logger.error(f"'vms' key not found or is not a list in {abs_path}")
+        return
+
+    vm_list = data['vms']
     for vm in vm_list:
-        configure_vm(vm['name'])
+        if isinstance(vm, dict) and 'name' in vm:
+            configure_vm(vm['name'])
+        else:
+            logger.warning(f"Invalid VM entry: {vm}")
 
 
 
