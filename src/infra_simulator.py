@@ -28,11 +28,16 @@ file_handler = logger.FileHandler(get_absolute_path('../logs/provisioning.log'),
 file_handler.setLevel(logger.DEBUG)
 file_handler.setFormatter(log_formatter)
 
-console_handler = logger.StreamHandler()
-console_handler.setLevel(logger.DEBUG)
-console_handler.setFormatter(log_formatter)
+logging_mode = os.getenv('LOGGING_MODE', 'console').lower()
+handlers = [file_handler]
 
-logger.basicConfig(level=logger.DEBUG, handlers=[file_handler, console_handler])
+if logging_mode != 'logs_only':
+    console_handler = logger.StreamHandler()
+    console_handler.setLevel(logger.DEBUG)
+    console_handler.setFormatter(log_formatter)
+    handlers.append(console_handler)
+
+logger.basicConfig(level=logger.DEBUG, handlers=handlers)
 
 
 def ask_user_for_vms():
@@ -49,7 +54,7 @@ def ask_user_for_vms():
             memory = input('Enter the amount of memory: ')
             disk = input('Enter the size of the disk: ')
 
-            print(separator)
+            logger.info(separator)
 
             try:        
                 vm = VirtualMachine(
@@ -65,14 +70,14 @@ def ask_user_for_vms():
 
                 logger.info(f'Virtual Machine created: {vm}')
                 vms.append(dict(vm))
-                print(separator)
+                logger.info(separator)
 
 
             except ValidationError as e:
                 for error in e.errors():
                     logger.warning(f"Validation error for field '{error['loc'][0]}': {error['msg']}")
                 
-                print(separator)
+                logger.info(separator)
             except Exception:
                 logger.error('Something went wrong, please try again later..')
             finally:
@@ -128,7 +133,6 @@ def dump_vms(vms):
 
 def configure_vm(vm):
     try:
-        logger.info(get_absolute_path('../scripts/init_vm.sh'))
         result = subprocess.run(['bash', get_absolute_path('../scripts/init_vm.sh'), str(vm)], capture_output=True, text=True)
         logger.info(f"init_vm.sh output: {result.stdout.strip().replace('\n', ' - ')}")
         if result.stderr:

@@ -8,7 +8,7 @@ A Python-based virtual machine infrastructure simulator that allows users to cre
 - **Data Validation**: Input validation using Pydantic models to ensure data integrity
 - **Configuration Persistence**: Save VM configurations to JSON files for later use
 - **Automated Provisioning**: Simulate VM setup and software installation (Nginx simulation included)
-- **Comprehensive Logging**: Detailed logging system with both file and console output
+- **Configurable Logging**: Flexible logging system with environment variable control for console/file-only modes
 - **Batch Processing**: Configure multiple VMs from saved configuration files
 
 ## Project Structure
@@ -17,6 +17,7 @@ A Python-based virtual machine infrastructure simulator that allows users to cre
 Final/
 ├── README.md                   # Project documentation
 ├── requirements.txt            # Python dependencies
+├── run.sh                     # Convenience script to run the application
 ├── configs/
 │   └── instances.json         # VM configurations storage
 ├── logs/
@@ -25,7 +26,7 @@ Final/
 │   └── init_vm.sh            # VM initialization script (Nginx installation simulation)
 └── src/
     ├── infra_simulator.py     # Main application logic
-    ├── machine.py            # VM data model
+    ├── machine.py            # VM data model (Pydantic)
     └── __pycache__/          # Python cache files
 ```
 
@@ -57,11 +58,26 @@ Final/
 
 ### Running the Simulator
 
-Navigate to the `src` directory and run the main script:
+You have several options to run the simulator:
 
+**Option 1: Using the convenience script**
+```bash
+./run.sh
+```
+
+**Option 2: Direct execution**
 ```bash
 cd src
 python infra_simulator.py
+```
+
+**Option 3: With custom logging mode**
+```bash
+# Run with logs-only mode (no console output)
+LOGGING_MODE=logs_only python src/infra_simulator.py
+
+# Run with default mode (console + logs)
+LOGGING_MODE=console python src/infra_simulator.py
 ```
 
 ### Interactive VM Creation
@@ -112,24 +128,48 @@ The application automatically saves VM configurations in JSON format:
 
 ### Requirements (`requirements.txt`)
 
-Key dependencies:
-- `pydantic`: Data validation and parsing
-- `annotated-types`: Type annotations support
-- `typing-extensions`: Extended typing support
+Current dependencies:
+- `pydantic==2.11.7`: Data validation and parsing using Pydantic v2
+- `pydantic_core==2.33.2`: Core functionality for Pydantic
+- `annotated-types==0.7.0`: Type annotations support
+- `typing_extensions==4.14.1`: Extended typing support
+- `typing-inspection==0.4.1`: Runtime type inspection utilities
 
 ## Logging
 
-The application provides comprehensive logging:
+The application provides flexible logging with environment variable control:
 
-- **Console Output**: Real-time feedback during execution
-- **Log File**: Persistent logging in `logs/provisioning.log`
-- **Log Levels**: INFO, WARNING, ERROR for different event types
+### Logging Modes
+
+- **Default Mode** (console + file): Outputs to both console and `logs/provisioning.log`
+- **Logs-only Mode**: Outputs only to the log file, no console output
+
+### Environment Variable Control
+
+Set the `LOGGING_MODE` environment variable to control logging behavior:
+
+```bash
+# Default: Both console and file logging
+LOGGING_MODE=console python src/infra_simulator.py
+
+# Logs-only: File logging only (no console output)
+LOGGING_MODE=logs_only python src/infra_simulator.py
+
+# You can also export the variable for persistent use
+export LOGGING_MODE=logs_only
+python src/infra_simulator.py
+```
 
 ### Log Format
 
 ```
 2025-01-27 10:30:45 - INFO - root - Virtual Machine created: name='web-server-01' cpu=2.0 memory=4096.0 disk=50.0
 ```
+
+### Log Levels
+- **INFO**: General information and successful operations
+- **WARNING**: Non-critical issues and validation errors
+- **ERROR**: Critical errors and failures
 
 ## VM Provisioning
 
@@ -169,15 +209,29 @@ The application includes robust error handling:
 
 ### Running in Development Mode
 
-For development purposes, you can modify the logging level or add additional debug information by editing the logging configuration in `infra_simulator.py`.
+The application supports different logging modes for development:
+
+```bash
+# For debugging: Default console + file logging
+python src/infra_simulator.py
+
+# For production/automated runs: File-only logging
+LOGGING_MODE=logs_only python src/infra_simulator.py
+
+# Using the convenience script
+./run.sh
+```
+
+You can also modify the logging configuration directly in `infra_simulator.py` for additional debug information.
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Permission Denied (init_vm.sh)**
+1. **Permission Denied (scripts)**
    ```bash
    chmod +x scripts/init_vm.sh
+   chmod +x run.sh
    ```
 
 2. **Module Not Found**
@@ -188,6 +242,11 @@ For development purposes, you can modify the logging level or add additional deb
 3. **Invalid Input Values**
    - Ensure CPU, memory, and disk values are numeric
    - Check that VM names are unique and non-empty
+
+4. **Logging Issues**
+   - Check `LOGGING_MODE` environment variable setting
+   - Verify `logs/` directory permissions
+   - Use `LOGGING_MODE=console` for debugging
 
 ### Log Analysis
 
